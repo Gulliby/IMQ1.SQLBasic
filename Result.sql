@@ -1,4 +1,4 @@
-﻿-- Использование Alter Scripts Создайте 2 sql-скрипта, которые выполняют обновление базы по версиям: 
+-- Использование Alter Scripts Создайте 2 sql-скрипта, которые выполняют обновление базы по версиям: 
 -- • 1.0 -> 1.1 • 1.1 -> 1.3 При выполнении задания добиться того, чтобы скрипты можно было накатывать многократно 
 -- (например, для случая ошибочного повторного обновления) без ошибок.
 
@@ -132,3 +132,64 @@ ORDER BY Country
 SELECT ProductName  
 FROM [Northwind].[dbo].[Products]
 WHERE ProductName LIKE 'cho_olade'
+
+-- Найти общую сумму всех заказов из таблицы Order Details с учетом количества закупленных товаров и скидок по ним. Результатом запроса 
+-- должна быть одна запись с одной колонкой с названием колонки 'Totals'. 
+SELECT SUM([UnitPrice] * (1-[Discount])*[Quantity]) AS 'Totals'
+FROM [Northwind].[dbo].[Order Details]
+
+-- По таблице Orders найти количество заказов, которые еще не были доставлены (т.е. в колонке ShippedDate нет значения даты доставки). 
+-- Использовать при этом запросе только оператор COUNT. Не использовать предложения WHERE и GROUP.
+SELECT COUNT(ShippedDate) AS [Shipped Orders]
+FROM [Northwind].[dbo].[Orders] 
+
+-- По таблице Orders найти количество различных покупателей (CustomerID), сделавших заказы. Использовать функцию COUNT и не использовать предложения WHERE и GROUP. 
+SELECT COUNT(DISTINCT CustomerID) AS [Customers]
+FROM [Northwind].[dbo].[Orders] 
+
+-- По таблице Orders найти количество заказов с группировкой по годам. В результатах запроса надо возвращать две колонки c названиями Year и Total. 
+-- Написать проверочный запрос, который вычисляет количество всех заказов. 
+SELECT YEAR(OrderDate) AS [Year], COUNT(OrderId) AS [Total]
+FROM [Northwind].[dbo].[Orders]
+GROUP BY YEAR(OrderDate)
+
+SELECT COUNT(OrderId) AS [Total]
+FROM [Northwind].[dbo].[Orders]
+
+-- По таблице Orders найти количество заказов, cделанных каждым продавцом. Заказ для указанного продавца – это любая запись в таблице Orders, где в колонке 
+-- EmployeeID задано значение для данного продавца. В результатах запроса надо возвращать колонку с именем продавца (Должно высвечиваться имя полученное конкатенацией 
+-- LastName & FirstName. Эта строка LastName & FirstName должна быть получена отдельным запросом в колонке основного запроса. Также основной запрос должен использовать 
+-- группировку по EmployeeID.) с названием колонки ‘Seller’ и колонку c количеством заказов возвращать с названием 'Amount'. Результаты запроса должны быть упорядочены по убыванию количества заказов.
+SELECT o.EmployeeID AS [Seller], COUNT(CustomerID) AS [Amount] , CONCAT(e.LastName ,e.FirstName ) AS [Name]
+FROM Orders o
+JOIN Employees  e
+ON o.EmployeeID = e.EmployeeID
+GROUP BY o.EmployeeID, CONCAT(e.LastName ,e.FirstName ) 
+ORDER BY [Amount] DESC
+
+-- По таблице Orders найти количество заказов, сделанных каждым продавцом и для каждого покупателя. Необходимо определить это только для заказов, сделанных в 1998 году. 
+SELECT COUNT(CustomerID) AS [Amount], CustomerID, EmployeeID
+FROM [Northwind].[dbo].[Orders]
+WHERE YEAR(OrderDate) = 1998
+GROUP BY EmployeeID, CustomerID
+
+--По таблице Employees найти для каждого продавца его руководителя. 
+SELECT emp.EmployeeID, emp.FirstName as EmployeeeName, boss.EmployeeID as customer, boss.FirstName as CustomerName
+FROM [Northwind].[dbo].[Employees] as emp
+JOIN [Employees]  customer ON  customer.EmployeeID  = emp.ReportsTo
+
+-- Выдать всех поставщиков (колонка CompanyName в таблице Suppliers), у которых нет хотя бы одного продукта на складе (UnitsInStock в таблице Products равно 0). 
+-- Использовать вложенный SELECT для этого запроса с использованием оператора IN.
+SELECT s.CompanyName
+FROM [Northwind].[dbo].[Suppliers] s
+WHERE s.SupplierID IN (SELECT p.SupplierID 
+						FROM [Northwind].[dbo].[Products] p 
+						WHERE p.UnitsInStock = 0)
+
+-- Выдать всех продавцов, которые имеют более 150 заказов. Использовать вложенный SELECT. 
+SELECT c.CompanyName
+FROM [Northwind].[dbo].[Customers] c
+WHERE c.CustomerID = ANY(SELECT o.CustomerID
+							FROM [Northwind].[dbo].[Orders] o
+							GROUP BY o.CustomerID
+							HAVING COUNT(o.OrderID) >= 150)
